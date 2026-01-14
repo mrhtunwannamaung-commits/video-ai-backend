@@ -1,10 +1,10 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import uvicorn
 
 app = FastAPI()
 
-# Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,34 +17,19 @@ app.add_middleware(
 def home():
     return {"message": "FastAPI backend is running!"}
 
-
-# ---------- 1) Generate Script ----------
 @app.post("/generate-script")
 async def generate_script(video: UploadFile = File(...)):
-
-    # Dummy example output
     english = "This is an English script generated from your video."
     myanmar = "ဒီလိုမျိုး မြန်မာ script ကို generate လုပ်ပြီး ပြန်ပေးထားပါတယ်။"
-
-    # Frontend expects english + myanmar keys
     return {"english": english, "myanmar": myanmar}
 
-
-# ---------- 2) English Voice ----------
 @app.post("/voice-en")
 async def voice_en(data: dict):
+    return FileResponse("eng.mp3", media_type="audio/mpeg", filename="english_voice.mp3")
 
-    # Normally this returns audio file, right now dummy
-    return {"url": "https://example.com/eng.mp3"}
-
-
-# ---------- 3) Myanmar Voice ----------
 @app.post("/voice-mm")
 async def voice_mm(data: dict):
-
-    # Dummy voice URL again
-    return {"url": "https://example.com/mm.mp3"}
-
+    return FileResponse("mm.mp3", media_type="audio/mpeg", filename="myanmar_voice.mp3")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=10000)
