@@ -5,10 +5,10 @@ import uvicorn
 
 app = FastAPI()
 
-# Allow frontend (GitHub Pages) to access backend
+# CORS allow frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # allow all domains
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -18,37 +18,34 @@ app.add_middleware(
 def home():
     return {"message": "FastAPI backend is running!"}
 
-# -------------------------
-# 1) Generate Script API
-# -------------------------
+
+# ----------- 1) Generate Script (Dummy Text) -----------
 @app.post("/generate-script")
 async def generate_script(video: UploadFile = File(...)):
-    # Dummy output
     english = "This is an English script generated from your video."
-    myanmar = "ဒီလို မြန်မာ script ကို generate လုပ်ပြီး ပြန်ပေးထားပါတယ်။"
+    myanmar = "ဒါက သင့် video ကနေ generate လုပ်ထားတဲ့ မြန်မာ script ဖြစ်ပါတယ်။"
+
     return {"english": english, "myanmar": myanmar}
 
 
-# -------------------------
-# 2) English Voice API (WAV)
-# -------------------------
+# ----------- 2) English Voice (Return eng.wav) -----------
 @app.post("/voice-en")
 async def voice_en(data: dict):
-    # File eng.wav must exist in GitHub backend repo
-    return FileResponse("eng.wav",
-                        media_type="audio/wav",
-                        filename="english_voice.wav")
+    return FileResponse(
+        "eng.wav",
+        media_type="audio/wav",
+        filename="english_voice.wav"
+    )
 
 
-# -------------------------
-# 3) Myanmar Voice API (WAV)
-# -------------------------
+# ----------- 3) Myanmar Voice (Return mm.wav) -----------
 @app.post("/voice-mm")
 async def voice_mm(data: dict):
-    # File mm.wav must exist in GitHub backend repo
-    return FileResponse("mm.wav",
-                        media_type="audio/wav",
-                        filename="myanmar_voice.wav")
+    return FileResponse(
+        "mm.wav",
+        media_type="audio/wav",
+        filename="myanmar_voice.wav"
+    )
 
 
 if __name__ == "__main__":
