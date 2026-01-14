@@ -5,9 +5,10 @@ import uvicorn
 
 app = FastAPI()
 
+# Allow frontend (GitHub Pages) to access backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],        # allow all domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -17,19 +18,38 @@ app.add_middleware(
 def home():
     return {"message": "FastAPI backend is running!"}
 
+# -------------------------
+# 1) Generate Script API
+# -------------------------
 @app.post("/generate-script")
 async def generate_script(video: UploadFile = File(...)):
+    # Dummy output
     english = "This is an English script generated from your video."
-    myanmar = "ဒီလိုမျိုး မြန်မာ script ကို generate လုပ်ပြီး ပြန်ပေးထားပါတယ်။"
+    myanmar = "ဒီလို မြန်မာ script ကို generate လုပ်ပြီး ပြန်ပေးထားပါတယ်။"
     return {"english": english, "myanmar": myanmar}
 
+
+# -------------------------
+# 2) English Voice API (WAV)
+# -------------------------
 @app.post("/voice-en")
 async def voice_en(data: dict):
-    return FileResponse("eng.mp3", media_type="audio/mpeg", filename="english_voice.mp3")
+    # File eng.wav must exist in GitHub backend repo
+    return FileResponse("eng.wav",
+                        media_type="audio/wav",
+                        filename="english_voice.wav")
 
+
+# -------------------------
+# 3) Myanmar Voice API (WAV)
+# -------------------------
 @app.post("/voice-mm")
 async def voice_mm(data: dict):
-    return FileResponse("mm.mp3", media_type="audio/mpeg", filename="myanmar_voice.mp3")
+    # File mm.wav must exist in GitHub backend repo
+    return FileResponse("mm.wav",
+                        media_type="audio/wav",
+                        filename="myanmar_voice.wav")
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=10000)
