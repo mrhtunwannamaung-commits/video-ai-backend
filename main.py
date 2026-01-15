@@ -33,24 +33,23 @@ async def generate_script(video: UploadFile = File(...)):
 
     # save video temporarily
     contents = await video.read()
-    with open("temp_video.mp4", "wb") as f:
+    with open("video.mp4", "wb") as f:
         f.write(contents)
 
-    # Generate English script
-    english_prompt = "Describe this video and generate a script in English."
-    english_res = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": english_prompt}]
+    # 1️⃣ Transcribe the video into English
+    transcription = client.audio.transcriptions.create(
+        file=open("video.mp4", "rb"),
+        model="whisper-1"
     )
-    english = english_res.choices[0].message.content
+    english = transcription.text
 
-    # Generate Myanmar script
-    mm_prompt = f"Translate this script into Myanmar language:\n\n{english}"
-    mm_res = client.chat.completions.create(
+    # 2️⃣ Translate English → Myanmar
+    mm_prompt = f"Translate this into Myanmar:\n\n{english}"
+    mm_resp = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": mm_prompt}]
     )
-    myanmar = mm_res.choices[0].message.content
+    myanmar = mm_resp.choices[0].message.content
 
     return {"english": english, "myanmar": myanmar}
 
