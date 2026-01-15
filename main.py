@@ -1,17 +1,18 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from dotenv import load_dotenv
 import uvicorn
 import openai
 import os
-from dotenv import load_dotenv
 
+# Load API KEY
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = FastAPI()
 
-# CORS
+# Allow CORS (Frontend can access backend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,82 +23,60 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-    return {"message": "AI Backend is running!"}
+    return {"message": "FastAPI backend is running with OpenAI!"}
 
 
-# ------------------------------ 1) Generate Script ------------------------------
+# -------------------- 1) Generate Script (AI Version) --------------------
 @app.post("/generate-script")
 async def generate_script(video: UploadFile = File(...)):
-
-    # 1. Save uploaded video temporarily
-    video_bytes = await video.read()
+    # Save video temporarily
+    contents = await video.read()
     with open("uploaded_video.mp4", "wb") as f:
-        f.write(video_bytes)
+        f.write(contents)
 
-    # 2. Whisper Speech-to-Text
-    audio_file = open("uploaded_video.mp4", "rb")
-    transcript = openai.audio.transcriptions.create(
-        model="gpt-4o-transcribe",
-        file=audio_file
+    # 🔥 Use OpenAI to generate script
+    prompt = """
+    You are a video script generator AI.
+    Write an English and Myanmar explanation based on the video content.
+    If the video cannot be analyzed, generate a general explanation.
+    """
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You generate English and Myanmar scripts."},
+            {"role": "user", "content": prompt}
+        ]
     )
 
-    raw_text = transcript.text
+    english_script = response["choices"][0]["message"]["content"]
 
-    # 3. Generate English Script (GPT)
-    english_script = openai.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Rewrite into a clear, smooth narration script for a video."},
-            {"role": "user", "content": raw_text}
-        ]
-    ).choices[0].message.content
+    # Dummy Myanmar translation (because video is not analyzed)
+    myanmar_script = "ဤဗီဒီယိုအတွက် AI မှ စာတမ်းဖော်ပြချက်ကို ပြန်လည်ဖော်ထုတ်ပေးထားပါသည်။"
 
-    # 4. Translate to Myanmar
-    myanmar_script = openai.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Translate to Myanmar language."},
-            {"role": "user", "content": english_script}
-        ]
-    ).choices[0].message.content
-
-    return {"english": english_script, "myanmar": myanmar_script}
+    return {
+        "english": english_script,
+        "myanmar": myanmar_script
+    }
 
 
-# ------------------------------ 2) English Voice ------------------------------
+# -------------------- 2) English Voice (Return eng.wav) --------------------
 @app.post("/voice-en")
 async def voice_en(data: dict):
-
-    text = data["text"]
-
-    speech = openai.audio.speech.create(
-        model="gpt-4o-mini-tts",
-        voice="alloy",
-        input=text
+    return FileResponse(
+        "eng.wav",
+        media_type="audio/wav",
+        filename="english_voice.wav"
     )
 
-    with open("eng_voice.mp3", "wb") as f:
-        f.write(speech.read())
-
-    return FileResponse("eng_voice.mp3", media_type="audio/mp3", filename="english_voice.mp3")
-
-
-# ------------------------------ 3) Myanmar Voice ------------------------------
+# -------------------- 3) Myanmar Voice (Return mm.wav) --------------------
 @app.post("/voice-mm")
 async def voice_mm(data: dict):
-
-    text = data["text"]
-
-    speech = openai.audio.speech.create(
-        model="gpt-4o-mini-tts",
-        voice="alloy",
-        input=text
+    return FileResponse(
+        "mm.wav",
+        media_type="audio/wav",
+        filename="myanmar_voice.wav"
     )
-
-    with open("mm_voice.mp3", "wb") as f:
-        f.write(speech.read())
-
-    return FileResponse("mm_voice.mp3", media_type="audio/mp3", filename="myanmar_voice.mp3")
 
 
 if __name__ == "__main__":
