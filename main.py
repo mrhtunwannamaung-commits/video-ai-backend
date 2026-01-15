@@ -1,13 +1,16 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
+# Load .env
 load_dotenv()
 
 app = FastAPI()
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,30 +21,83 @@ app.add_middleware(
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
+@app.get("/")
+def home():
+    return {"message": "Backend is running!"}
+
+
+# ---------------- 1) Generate Script ----------------
 @app.post("/generate-script")
 async def generate_script(video: UploadFile = File(...)):
 
-    # Save temp file
+    # save video temporarily
     contents = await video.read()
-    temp_video = "uploaded.mp4"
-    with open(temp_video, "wb") as f:
+    with open("temp_video.mp4", "wb") as f:
         f.write(contents)
 
-    # Send video to OpenAI for transcription
-    audio_file = open(temp_video, "rb")
-    transcript = client.audio.transcriptions.create(
-        model="gpt-4o-transcribe",  # Whisper v3
-        file=audio_file
-    )
-
-    english = transcript.text
-
-    # Translate to Burmese
-    translate = client.responses.create(
+    # Generate English script
+    english_prompt = "Describe this video and generate a script in English."
+    english_res = client.chat.completions.create(
         model="gpt-4o-mini",
-        input=f"Translate this to Myanmar language:\n\n{english}"
+        messages=[{"role": "user", "content": english_prompt}]
     )
+    english = english_res.choices[0].message.content
 
-    myanmar = translate.output[0].content[0].text
+    # Generate Myanmar script
+    mm_prompt = f"Translate this script into Myanmar language:\n\n{english}"
+    mm_res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": mm_prompt}]
+    )
+    myanmar = mm_res.choices[0].message.content
 
     return {"english": english, "myanmar": myanmar}
+
+
+# ---------------- 2) English Voice ----------------
+@app.post("/voice-en")
+async def voice_en(data: dict):
+
+    text = data.get("text", "")
+    speech = client.audio.speech.create(
+        model="gpt-4o-mini-tts",
+        voice="alloy",
+        input=text
+    )
+
+    with open("english_voice.wav", "wb") as f:
+        f.write(speech.read())
+
+    return FileResponse(
+        "english_voice.wav",
+        media_type="audio/wav",
+        filename="english_voice.wav"
+    )
+
+
+# ---------------- 3) Myanmar Voice ----------------
+@app.post("/voice-mm")
+async def voice_mm(data: dict):
+
+    text = data.get("text", "")
+    speech = client.audio.speech.create(
+        model="gpt-4o-mini-tts",
+        voice="alloy",
+        input=text
+    )
+
+    with open("myanmar_voice.wav", "wb") as f:
+        f.write(speech.read())
+
+    return FileResponse(
+        "myanmar_voice.wav",
+        media_type="audio/wav",
+        filename="myanmar_voice.wav"
+    )
+
+
+# ---------------- Start ----------------
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
