@@ -5,7 +5,7 @@ import uvicorn
 
 app = FastAPI()
 
-# CORS allow frontend
+# ---------------- CORS (Frontend Allow) ----------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,6 +13,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/")
 def home():
