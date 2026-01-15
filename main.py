@@ -5,7 +5,7 @@ import uvicorn
 
 app = FastAPI()
 
-# ---------------- CORS (Frontend Allow) ----------------
+# Allow CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,22 +14,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/")
 def home():
     return {"message": "FastAPI backend is running!"}
 
 
-# ----------- 1) Generate Script (Dummy Text) -----------
+# --------------------- 1) Generate Script ---------------------
 @app.post("/generate-script")
 async def generate_script(video: UploadFile = File(...)):
-    english = "This is an English script generated from your video."
-    myanmar = "ဒါက သင့် video ကနေ generate လုပ်ထားတဲ့ မြန်မာ script ဖြစ်ပါတယ်။"
+
+    # Video file save temporarily (for future processing)
+    contents = await video.read()
+    with open("uploaded.mp4", "wb") as f:
+        f.write(contents)
+
+    # Dummy text (change this later if using AI)
+    english = "Your video was successfully received. English script generated."
+    myanmar = "သင့် video ကို backend ကသေချာလက်ခံပြီး မြန်မာ script ကို generate လုပ်ပြီးပြီ။"
 
     return {"english": english, "myanmar": myanmar}
 
 
-# ----------- 2) English Voice (Return eng.wav) -----------
+# --------------------- 2) English Voice ---------------------
 @app.post("/voice-en")
 async def voice_en(data: dict):
     return FileResponse(
@@ -39,7 +45,7 @@ async def voice_en(data: dict):
     )
 
 
-# ----------- 3) Myanmar Voice (Return mm.wav) -----------
+# --------------------- 3) Myanmar Voice ---------------------
 @app.post("/voice-mm")
 async def voice_mm(data: dict):
     return FileResponse(
